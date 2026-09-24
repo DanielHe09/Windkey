@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       const step = (text: string, kind?: "step" | "detail" | "verdict") => send({ type: "step", text, kind });
       try {
         step(`Reading your note (${text.length} characters)`);
-        step("Parsing sentences into structured claims. The language model only labels them; it never computes or looks up numbers.");
+        step("Parsing sentences into structured claims. The LLM only labels them; it never computes or looks up numbers.");
         const extracted = await extractClaims(text);
         if (!extracted.ok) return send({ type: "error", error: extracted.error });
 

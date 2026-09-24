@@ -136,7 +136,7 @@ export default function Home() {
         </section>
       ))}
 
-      <p className={styles.foot}>Language model only parses sentences into structured claims. Every figure, calculation and verdict is computed in code from SEC XBRL data. Demo: annual figures, last three fiscal years.{sources.length > 0 && ` Data source: ${sources.map((x) => (x === "live" ? "SEC EDGAR (live, cached 24h)" : "bundled SEC snapshot (SEC unreachable)")).join(" and ")}.`}</p>
+      <p className={styles.foot}>The LLM only parses sentences into structured claims. Every figure, calculation and verdict is computed deterministically from SEC XBRL data; a second LLM pass can only flag a reading it is unsure about. Demo: annual figures, last three fiscal years.{sources.length > 0 && ` Data source: ${sources.map((x) => (x === "live" ? "SEC EDGAR (live, cached 24h)" : "bundled SEC snapshot (SEC unreachable)")).join(" and ")}.`}</p>
     </main>
   );
 }
