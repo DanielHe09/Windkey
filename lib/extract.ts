@@ -30,7 +30,7 @@ export type ExtractResult = { ok: true; claims: Claim[]; truncated: boolean } | 
 export async function extractClaims(text: string): Promise<ExtractResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "Server is missing OPENAI_API_KEY." };
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, timeout: 20_000, maxRetries: 1 });
   const { $schema: _omit, ...schema } = z.toJSONSchema(ExtractionSchema) as Record<string, unknown>;
   void _omit;
 

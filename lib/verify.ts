@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { COMPANIES } from "./companies.mjs";
 import { runChecks, type Check } from "./checks";
+import type { Judgement } from "./judge";
 import { availablePeriods, getFact, METRIC_LABEL, usd, type Fact, type Metric, type Row } from "./sec";
 
 export const ClaimSchema = z.object({
@@ -39,6 +40,10 @@ export interface Result {
   /** verified: company hand-checked against its 10-Ks; cross-checked: revenue identity passed; unchecked: sanity checks only */
   trust: "verified" | "cross-checked" | "unchecked" | null;
   checks: Check[];
+  /** Fiscal-year labels the figures were taken from, earliest first */
+  periods: string[];
+  /** Second opinion on how the sentence was read (LLM); never changes the verdict */
+  judgement?: Judgement;
 }
 
 const pct = (n: number) => `${n.toFixed(2)}%`;
@@ -68,6 +73,7 @@ export const refuse = (claim: Claim, reason: string, evidence: Evidence[] = [], 
   evidence,
   trust: null,
   checks,
+  periods: [],
 });
 
 /** Value of a metric (or margin) for one period, with the facts it came from. */
@@ -149,6 +155,7 @@ export function verify(claim: Claim, deps: Deps): Result {
       evidence,
       trust,
       checks: report.checks,
+      periods: prior ? [prior, cur] : [cur],
     };
   }
 
@@ -168,6 +175,7 @@ export function verify(claim: Claim, deps: Deps): Result {
       evidence,
       trust,
       checks: report.checks,
+      periods: prior ? [prior, cur] : [cur],
     };
   }
 
@@ -185,5 +193,6 @@ export function verify(claim: Claim, deps: Deps): Result {
     evidence,
     trust,
     checks: report.checks,
+    periods: prior ? [prior, cur] : [cur],
   };
 }

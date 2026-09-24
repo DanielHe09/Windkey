@@ -31,3 +31,6 @@
 .trust { margin: 0; font-size: 0.8rem; font-weight: 600; }
 .checks { font-size: 0.8rem; color: var(--muted); }
 .checks ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; }
+.unsure { border-left: 4px solid var(--warn); }
+.notSure { margin: 0; font-size: 0.85rem; color: var(--warn); font-weight: 600; }
+.secondOpinion { margin: 0; font-size: 0.8rem; color: var(--muted); }

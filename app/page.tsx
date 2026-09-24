@@ -6,8 +6,9 @@ import styles from "./page.module.css";
 
 interface Evidence { label: string; value: string; url: string }
 interface Check { name: string; ok: boolean; detail: string }
+interface Judgement { status: "consistent" | "unsure" | "unavailable"; yes: number; total: number; concerns: string[]; uncovered: string | null }
 interface Claim { raw_text: string; company: string | null; metric: string | null; kind: string | null; direction: string | null; value: number | null; period: string | null; compare_to: string | null }
-interface Result { claim: Claim; verdict: "SUPPORTED" | "INCORRECT" | "CANNOT_VERIFY"; arithmetic: string; reason?: string; evidence: Evidence[]; trust: "verified" | "cross-checked" | "unchecked" | null; checks: Check[] }
+interface Result { claim: Claim; verdict: "SUPPORTED" | "INCORRECT" | "CANNOT_VERIFY"; arithmetic: string; reason?: string; evidence: Evidence[]; trust: "verified" | "cross-checked" | "unchecked" | null; checks: Check[]; judgement?: Judgement }
 
 const SAMPLE = "Apple's revenue rose 6.4% year over year. Microsoft's operating margin fell. Costco's revenue rose 8%.";
 const TRUST = {
@@ -102,13 +103,20 @@ export default function Home() {
       )}
 
       {results.map(({ result: r, company: co }, i) => (
-        <section key={i} className={styles.card}>
+        <section key={i} className={`${styles.card} ${r.judgement?.status === "unsure" ? styles.unsure : ""}`}>
           <div className={styles.head}>
             <span className={`${styles.badge} ${styles[r.verdict]}`}><span aria-hidden>{ICON[r.verdict]}</span> {LABEL[r.verdict]}</span>
             {co && <span className={styles.ticker}>{co.ticker}</span>}
             <q className={styles.quote}>{r.claim.raw_text}</q>
           </div>
           {r.trust && <p className={styles.trust}>{TRUST[r.trust]}</p>}
+          {r.judgement?.status === "unsure" && (
+            <p className={styles.notSure} role="status">
+              Not sure this sentence was read correctly ({r.judgement.yes}/{r.judgement.total} checks agreed; unsure about {r.judgement.concerns.join(", ")}). Check &quot;Parsed as&quot; below before relying on this verdict.
+            </p>
+          )}
+          {r.judgement?.status === "consistent" && <p className={styles.secondOpinion}>Second opinion: reading of the sentence looks consistent ({r.judgement.yes}/{r.judgement.total}).</p>}
+          {r.judgement?.uncovered && <p className={styles.secondOpinion}>Not covered by this check: {r.judgement.uncovered}</p>}
           <p className={styles.parsed}>Parsed as: {parsedAs(r.claim)}</p>
           {r.reason && <p className={styles.reason}>{r.reason}</p>}
           {r.arithmetic && <p className={styles.math}>{r.arithmetic}</p>}

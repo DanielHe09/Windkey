@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { extractClaims } from "@/lib/extract";
 import { depsFor, refuse, screen, verify, type Claim, type Result } from "@/lib/verify";
 import type { CheckEvent } from "@/lib/events";
+import { judgeParse } from "@/lib/judge";
 import { type CompanyRef, resolveCompany } from "@/lib/resolve";
 import { type LoadedFacts, loadFacts } from "@/lib/sec-live";
 
@@ -90,6 +91,11 @@ export async function POST(req: Request) {
             }
           }
 
+          // Start the second-opinion call now so its latency overlaps with the log lines below.
+          const judging =
+            company && result.verdict !== "CANNOT_VERIFY"
+              ? judgeParse({ note: text, company: company.name, claim, periods: result.periods, result })
+              : null;
           for (const e of result.evidence) {
             await pace();
             step(`Found ${e.label} = ${e.value}`, "detail");
@@ -107,6 +113,19 @@ export async function POST(req: Request) {
           await pace();
           step(result.arithmetic ? `Comparing: ${result.arithmetic}` : `Not checkable: ${result.reason}`, "detail");
           step(`Verdict: ${VERDICT_TEXT[result.verdict]}`, "verdict");
+          if (judging) {
+            step("Second opinion: an LLM answers a yes/no checklist on whether the sentence was read correctly (it sees no SEC data and cannot change the verdict)");
+            const j = await judging;
+            result = { ...result, judgement: j };
+            step(
+              j.status === "unavailable"
+                ? "Second opinion unavailable; the verdict above stands on its own"
+                : j.status === "consistent"
+                  ? `Reading looks consistent with the sentence (${j.yes}/${j.total} yes)`
+                  : `Not sure this sentence was read correctly (${j.yes}/${j.total} yes; unsure about ${j.concerns.join(", ")}). Check "Parsed as".`,
+              "detail",
+            );
+          }
           send({ type: "result", result, company: company && { name: company.name, ticker: company.ticker, verified: company.verified } });
         }
         send({ type: "done", sources: [...sources], truncated });
