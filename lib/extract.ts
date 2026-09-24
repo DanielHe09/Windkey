@@ -23,7 +23,7 @@ Rules:
 - Copy numbers exactly as written (keep their stated precision, e.g. 18 vs 18.0). Do not convert, round, or infer figures that were not stated.
 - Set fields that do not apply to null.`;
 
-export type ExtractResult = { ok: true; claims: Claim[] } | { ok: false; error: string };
+export type ExtractResult = { ok: true; claims: Claim[]; truncated: boolean } | { ok: false; error: string };
 
 export async function extractClaims(text: string): Promise<ExtractResult> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -45,7 +45,7 @@ export async function extractClaims(text: string): Promise<ExtractResult> {
       });
       const content = res.choices[0]?.message?.content;
       const parsed = ExtractionSchema.safeParse(content ? JSON.parse(content) : null);
-      if (parsed.success) return { ok: true, claims: parsed.data.claims.slice(0, MAX_CLAIMS) };
+      if (parsed.success) return { ok: true, claims: parsed.data.claims.slice(0, MAX_CLAIMS), truncated: parsed.data.claims.length > MAX_CLAIMS };
     } catch (e) {
       if (attempt === 1) return { ok: false, error: `Claim extraction failed: ${e instanceof Error ? e.message : "unknown error"}` };
     }

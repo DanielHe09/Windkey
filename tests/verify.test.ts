@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFact, availablePeriods, filingUrl } from "@/lib/sec";
+import { getFact, availablePeriods, filingUrl, type Metric } from "@/lib/sec";
 import { verify, type Claim } from "@/lib/verify";
 
 const periods = availablePeriods();
@@ -15,7 +15,21 @@ const base: Claim = {
 };
 const run = (c: Partial<Claim>) => verify({ ...base, ...c }, periods);
 
-describe("fact selection (hand-checked against Apple 10-Ks)", () => {
+// Income statement figures ($M) read directly from the "Consolidated Statements of Operations" (R3.htm)
+// in Apple's FY2025 (0000320193-25-000079), FY2024 (0000320193-24-000123) and FY2023 (0000320193-23-000106) 10-Ks.
+const FROM_10K: Record<string, Record<string, number>> = {
+  "2025-09-27": { revenue: 416161, gross_profit: 195201, operating_income: 133050, net_income: 112010 },
+  "2024-09-28": { revenue: 391035, gross_profit: 180683, operating_income: 123216, net_income: 93736 },
+  "2023-09-30": { revenue: 383285, gross_profit: 169148, operating_income: 114301, net_income: 96995 },
+};
+
+describe("snapshot matches the filed 10-K income statements", () => {
+  for (const [end, metrics] of Object.entries(FROM_10K))
+    for (const [metric, millions] of Object.entries(metrics))
+      it(`${metric} ${end}`, () => expect(getFact(metric as Metric, end)!.value).toBe(millions * 1e6));
+});
+
+describe("fact selection", () => {
   it("FY2024 revenue is $391.035B from the FY2024 10-K", () => {
     const f = getFact("revenue", "2024-09-28")!;
     expect(f.value).toBe(391_035_000_000);

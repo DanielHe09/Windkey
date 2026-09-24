@@ -33,5 +33,5 @@ export async function POST(req: Request) {
   const periods = availablePeriods(facts);
   const deps = { periods, fact: (m: Parameters<typeof getFact>[0], end: string) => getFact(m, end, facts) };
   const results = extracted.claims.map((c) => verify(c, periods, deps));
-  return NextResponse.json({ company: COMPANY.name, periods: Object.keys(periods), source, fetchedAt, results });
+  return NextResponse.json({ company: COMPANY.name, periods: Object.keys(periods), source, fetchedAt, truncated: extracted.truncated, results });
 }

@@ -26,6 +26,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
 
   async function check() {
     setLoading(true);
@@ -36,6 +37,7 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       setResults(data.results);
       setSource(data.source);
+      setTruncated(Boolean(data.truncated));
     } catch (e) {
       setResults(null);
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -55,6 +57,7 @@ export default function Home() {
       {error && <p role="alert" className={styles.error}>{error}</p>}
 
       {results && results.length === 0 && <p className={styles.sub}>No numerical claims found in that text.</p>}
+      {results && truncated && <p className={styles.sub}>Only the first 3 claims were checked. Paste the rest separately.</p>}
       {results?.map((r, i) => (
         <section key={i} className={styles.card}>
           <div className={styles.head}>
