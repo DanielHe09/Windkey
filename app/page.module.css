@@ -17,3 +17,11 @@
 .math { margin: 0; font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; overflow-x: auto; }
 .evidence { margin: 0; padding-left: 18px; font-size: 0.88rem; line-height: 1.6; }
 .foot { margin-top: 12px; font-size: 0.8rem; color: var(--muted); }
+.log { list-style: none; margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); max-height: 280px; overflow-y: auto; font-family: ui-monospace, Menlo, monospace; font-size: 0.82rem; line-height: 1.6; display: flex; flex-direction: column; gap: 2px; }
+.line { display: flex; gap: 8px; align-items: baseline; }
+.detail { color: var(--muted); padding-left: 16px; }
+.verdictLine { font-weight: 700; }
+.mark { flex: none; width: 1em; text-align: center; }
+.pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--fg); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }

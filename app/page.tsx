@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { CheckEvent } from "@/lib/events";
 import styles from "./page.module.css";
 
 interface Evidence { label: string; value: string; url: string }
@@ -20,26 +21,46 @@ function parsedAs(c: Claim): string {
   return parts.join(" · ");
 }
 
+interface Step { text: string; kind?: "step" | "detail" | "verdict" }
+
 export default function Home() {
   const [text, setText] = useState(SAMPLE);
+  const [steps, setSteps] = useState<Step[]>([]);
   const [results, setResults] = useState<Result[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [source, setSource] = useState<string | null>(null);
-  const [truncated, setTruncated] = useState(false);
+  const logEnd = useRef<HTMLLIElement>(null);
+
+  useEffect(() => { logEnd.current?.scrollIntoView({ block: "nearest" }); }, [steps]);
 
   async function check() {
     setLoading(true);
     setError(null);
+    setSteps([]);
+    setResults([]);
+    setSource(null);
     try {
       const res = await fetch("/api/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
-      setResults(data.results);
-      setSource(data.source);
-      setTruncated(Boolean(data.truncated));
+      if (!res.ok || !res.body) throw new Error((await res.json().catch(() => null))?.error ?? "Something went wrong.");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines.filter(Boolean)) {
+          const ev = JSON.parse(line) as CheckEvent;
+          if (ev.type === "step") setSteps((s) => [...s, { text: ev.text, kind: ev.kind }]);
+          else if (ev.type === "result") setResults((r) => [...(r ?? []), ev.result]);
+          else if (ev.type === "done") setSource(ev.source);
+          else if (ev.type === "error") throw new Error(ev.error);
+        }
+      }
     } catch (e) {
-      setResults(null);
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setLoading(false);
@@ -56,9 +77,19 @@ export default function Home() {
 
       {error && <p role="alert" className={styles.error}>{error}</p>}
 
-      {results && results.length === 0 && <p className={styles.sub}>No numerical claims found in that text.</p>}
-      {results && truncated && <p className={styles.sub}>Only the first 3 claims were checked. Paste the rest separately.</p>}
-      {results?.map((r, i) => (
+      {steps.length > 0 && (
+        <ol className={styles.log} aria-live="polite" aria-label="Progress">
+          {steps.map((s, i) => (
+            <li key={i} className={`${styles.line} ${s.kind === "detail" ? styles.detail : ""} ${s.kind === "verdict" ? styles.verdictLine : ""}`}>
+              <span className={styles.mark} aria-hidden>{i === steps.length - 1 && loading ? <span className={styles.pulse} /> : s.kind === "detail" ? "↳" : "✓"}</span>
+              <span>{s.text}</span>
+            </li>
+          ))}
+          <li ref={logEnd} aria-hidden />
+        </ol>
+      )}
+
+                  {results?.map((r, i) => (
         <section key={i} className={styles.card}>
           <div className={styles.head}>
             <span className={`${styles.badge} ${styles[r.verdict]}`}><span aria-hidden>{ICON[r.verdict]}</span> {LABEL[r.verdict]}</span>
