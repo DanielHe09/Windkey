@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { extractClaims } from "@/lib/extract";
 import { verify } from "@/lib/verify";
-import { availablePeriods, COMPANY } from "@/lib/sec";
+import { availablePeriods, COMPANY, getFact } from "@/lib/sec";
+import { loadFacts } from "@/lib/sec-live";
 
 const MAX_CHARS = 1000;
 const WINDOW_MS = 60_000;
@@ -28,7 +29,9 @@ export async function POST(req: Request) {
   const extracted = await extractClaims(text);
   if (!extracted.ok) return NextResponse.json({ error: extracted.error }, { status: 502 });
 
-  const periods = availablePeriods();
-  const results = extracted.claims.map((c) => verify(c, periods));
-  return NextResponse.json({ company: COMPANY.name, periods: Object.keys(periods), results });
+  const { facts, source, fetchedAt } = await loadFacts();
+  const periods = availablePeriods(facts);
+  const deps = { periods, fact: (m: Parameters<typeof getFact>[0], end: string) => getFact(m, end, facts) };
+  const results = extracted.claims.map((c) => verify(c, periods, deps));
+  return NextResponse.json({ company: COMPANY.name, periods: Object.keys(periods), source, fetchedAt, results });
 }

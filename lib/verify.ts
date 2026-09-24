@@ -38,7 +38,7 @@ const pct = (n: number) => `${n.toFixed(2)}%`;
 /** Period end dates keyed by label; injectable for tests. */
 export type Periods = Record<string, string>;
 
-interface Deps {
+export interface Deps {
   periods: Periods;
   fact: (metric: Metric, end: string) => Fact | null;
 }

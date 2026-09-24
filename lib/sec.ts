@@ -16,7 +16,7 @@ const CONCEPTS: Record<Metric, string[]> = {
   gross_profit: ["GrossProfit"],
 };
 
-interface Row {
+export interface Row {
   start: string;
   end: string;
   val: number;

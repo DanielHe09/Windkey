@@ -1,9 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { z } from "zod";
 import { ClaimSchema, type Claim } from "./verify";
 
 export const MAX_CLAIMS = 3;
-const MODEL = "claude-sonnet-5";
+const MODEL = "gpt-4o-mini";
 
 const ExtractionSchema = z.object({ claims: z.array(ClaimSchema) });
 
@@ -26,24 +26,25 @@ Rules:
 export type ExtractResult = { ok: true; claims: Claim[] } | { ok: false; error: string };
 
 export async function extractClaims(text: string): Promise<ExtractResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { ok: false, error: "Server is missing ANTHROPIC_API_KEY." };
-  const client = new Anthropic({ apiKey });
-  const inputSchema = z.toJSONSchema(ExtractionSchema) as Anthropic.Tool.InputSchema;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, error: "Server is missing OPENAI_API_KEY." };
+  const client = new OpenAI({ apiKey });
+  const { $schema: _omit, ...schema } = z.toJSONSchema(ExtractionSchema) as Record<string, unknown>;
+  void _omit;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const msg = await client.messages.create({
+      const res = await client.chat.completions.create({
         model: MODEL,
-        max_tokens: 1500,
         temperature: 0,
-        system: SYSTEM,
-        tools: [{ name: "record_claims", description: "Record the structured claims found in the note.", input_schema: inputSchema }],
-        tool_choice: { type: "tool", name: "record_claims" },
-        messages: [{ role: "user", content: `<draft_note>\n${text}\n</draft_note>` }],
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: `<draft_note>\n${text}\n</draft_note>` },
+        ],
+        response_format: { type: "json_schema", json_schema: { name: "claims", strict: true, schema } },
       });
-      const block = msg.content.find((b) => b.type === "tool_use");
-      const parsed = ExtractionSchema.safeParse(block && block.type === "tool_use" ? block.input : null);
+      const content = res.choices[0]?.message?.content;
+      const parsed = ExtractionSchema.safeParse(content ? JSON.parse(content) : null);
       if (parsed.success) return { ok: true, claims: parsed.data.claims.slice(0, MAX_CLAIMS) };
     } catch (e) {
       if (attempt === 1) return { ok: false, error: `Claim extraction failed: ${e instanceof Error ? e.message : "unknown error"}` };

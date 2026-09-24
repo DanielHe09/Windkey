@@ -12,7 +12,7 @@ One company (Apple), FY2023–FY2025 annual data. Metrics: revenue, operating in
 
 ## Run
 ```
-cp .env.example .env.local   # add ANTHROPIC_API_KEY
+cp .env.example .env.local   # add OPENAI_API_KEY
 npm install
 npm run dev
 npm test

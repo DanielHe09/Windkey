@@ -25,6 +25,7 @@ export default function Home() {
   const [results, setResults] = useState<Result[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [source, setSource] = useState<string | null>(null);
 
   async function check() {
     setLoading(true);
@@ -34,6 +35,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       setResults(data.results);
+      setSource(data.source);
     } catch (e) {
       setResults(null);
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -72,7 +74,7 @@ export default function Home() {
         </section>
       ))}
 
-      <p className={styles.foot}>Language model only parses sentences into structured claims. Every figure, calculation and verdict is computed in code from SEC XBRL data. Demo: one company, three fiscal years.</p>
+      <p className={styles.foot}>Language model only parses sentences into structured claims. Every figure, calculation and verdict is computed in code from SEC XBRL data. Demo: one company, three fiscal years.{source && ` Data source: ${source === "live" ? "SEC EDGAR (live, cached 24h)" : "bundled SEC snapshot (SEC unreachable)"}.`}</p>
     </main>
   );
 }
