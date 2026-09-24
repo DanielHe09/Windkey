@@ -1,0 +1,19 @@
+.main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 14px; }
+.title { font-size: 1.9rem; margin: 0; letter-spacing: -0.02em; }
+.sub { margin: 0; color: var(--muted); line-height: 1.5; }
+.input { width: 100%; font: inherit; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--fg); resize: vertical; }
+.button { align-self: flex-start; font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 10px; border: 0; background: var(--fg); color: var(--bg); cursor: pointer; }
+.button:disabled { opacity: 0.5; cursor: default; }
+.error { color: var(--bad); margin: 0; }
+.card { border: 1px solid var(--border); background: var(--card); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.quote { font-weight: 500; }
+.badge { font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.SUPPORTED { background: var(--ok-bg); color: var(--ok); }
+.INCORRECT { background: var(--bad-bg); color: var(--bad); }
+.CANNOT_VERIFY { background: var(--na-bg); color: var(--muted); }
+.parsed { margin: 0; font-size: 0.8rem; color: var(--muted); }
+.reason { margin: 0; }
+.math { margin: 0; font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; overflow-x: auto; }
+.evidence { margin: 0; padding-left: 18px; font-size: 0.88rem; line-height: 1.6; }
+.foot { margin-top: 12px; font-size: 0.8rem; color: var(--muted); }
