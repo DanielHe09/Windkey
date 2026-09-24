@@ -5,16 +5,23 @@ import type { CheckEvent } from "@/lib/events";
 import styles from "./page.module.css";
 
 interface Evidence { label: string; value: string; url: string }
-interface Claim { raw_text: string; metric: string | null; kind: string | null; direction: string | null; value: number | null; period: string | null; compare_to: string | null }
-interface Result { claim: Claim; verdict: "SUPPORTED" | "INCORRECT" | "CANNOT_VERIFY"; arithmetic: string; reason?: string; evidence: Evidence[] }
+interface Check { name: string; ok: boolean; detail: string }
+interface Claim { raw_text: string; company: string | null; metric: string | null; kind: string | null; direction: string | null; value: number | null; period: string | null; compare_to: string | null }
+interface Result { claim: Claim; verdict: "SUPPORTED" | "INCORRECT" | "CANNOT_VERIFY"; arithmetic: string; reason?: string; evidence: Evidence[]; trust: "verified" | "cross-checked" | "unchecked" | null; checks: Check[] }
 
-const SAMPLE = "Apple's revenue rose 6.4% year over year, while operating margin fell. Diluted EPS was $7.46.";
+const SAMPLE = "Apple's revenue rose 6.4% year over year. Microsoft's operating margin fell. Costco's revenue rose 8%.";
+const TRUST = {
+  verified: "Verified: figures checked against the 10-K",
+  "cross-checked": "Cross-checked: revenue reconciled to gross profit",
+  unchecked: "Not cross-checked: SEC tags only (sanity checks passed)",
+} as const;
+interface Company { name: string; ticker: string; verified: boolean }
 const LABEL = { SUPPORTED: "Supported", INCORRECT: "Incorrect", CANNOT_VERIFY: "Cannot verify" } as const;
 const ICON = { SUPPORTED: "✓", INCORRECT: "✕", CANNOT_VERIFY: "?" } as const;
 
 function parsedAs(c: Claim): string {
   if (!c.metric || !c.kind) return "not a checkable claim";
-  const parts = [c.metric.replace("_", " "), c.kind.replace("_", " ")];
+  const parts = [c.company ?? "", c.metric.replace("_", " "), c.kind.replace("_", " ")].filter(Boolean);
   if (c.direction) parts.push(c.direction);
   if (c.value !== null) parts.push(String(c.value));
   parts.push(`${c.compare_to ?? "prior year"} → ${c.period ?? "latest year"}`);
@@ -26,10 +33,11 @@ interface Step { text: string; kind?: "step" | "detail" | "verdict" }
 export default function Home() {
   const [text, setText] = useState(SAMPLE);
   const [steps, setSteps] = useState<Step[]>([]);
-  const [results, setResults] = useState<Result[] | null>(null);
+  const [company, setCompany] = useState("AAPL");
+  const [results, setResults] = useState<{ result: Result; company: Company | null }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [source, setSource] = useState<string | null>(null);
+  const [sources, setSources] = useState<string[]>([]);
   const logEnd = useRef<HTMLLIElement>(null);
 
   useEffect(() => { logEnd.current?.scrollIntoView({ block: "nearest" }); }, [steps]);
@@ -39,9 +47,9 @@ export default function Home() {
     setError(null);
     setSteps([]);
     setResults([]);
-    setSource(null);
+    setSources([]);
     try {
-      const res = await fetch("/api/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      const res = await fetch("/api/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, company }) });
       if (!res.ok || !res.body) throw new Error((await res.json().catch(() => null))?.error ?? "Something went wrong.");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -55,8 +63,8 @@ export default function Home() {
         for (const line of lines.filter(Boolean)) {
           const ev = JSON.parse(line) as CheckEvent;
           if (ev.type === "step") setSteps((s) => [...s, { text: ev.text, kind: ev.kind }]);
-          else if (ev.type === "result") setResults((r) => [...(r ?? []), ev.result]);
-          else if (ev.type === "done") setSource(ev.source);
+          else if (ev.type === "result") setResults((r) => [...r, { result: ev.result, company: ev.company }]);
+          else if (ev.type === "done") setSources(ev.sources);
           else if (ev.type === "error") throw new Error(ev.error);
         }
       }
@@ -70,9 +78,13 @@ export default function Home() {
   return (
     <main className={styles.main}>
       <h1 className={styles.title}>Earnings claim checker</h1>
-      <p className={styles.sub}>Paste 1–3 numerical claims about Apple (FY2023–FY2025). Each is checked against SEC 10-K filing data, with the arithmetic and source shown.</p>
+      <p className={styles.sub}>Paste 1–3 numerical claims about any US-listed company (last three fiscal years). Each is checked against SEC 10-K filing data, with the arithmetic and source shown. Apple, Microsoft and Nvidia are hand-verified; other companies get automatic data checks and are refused if their figures look unreliable.</p>
 
       <textarea className={styles.input} value={text} onChange={(e) => setText(e.target.value)} rows={4} maxLength={1000} aria-label="Draft earnings note" />
+      <label className={styles.company}>
+        Company when the note doesn&apos;t name one
+        <input value={company} onChange={(e) => setCompany(e.target.value)} maxLength={80} placeholder="Name or ticker" />
+      </label>
       <button className={styles.button} onClick={check} disabled={loading || !text.trim()}>{loading ? "Checking…" : "Check claims"}</button>
 
       {error && <p role="alert" className={styles.error}>{error}</p>}
@@ -89,15 +101,23 @@ export default function Home() {
         </ol>
       )}
 
-                  {results?.map((r, i) => (
+      {results.map(({ result: r, company: co }, i) => (
         <section key={i} className={styles.card}>
           <div className={styles.head}>
             <span className={`${styles.badge} ${styles[r.verdict]}`}><span aria-hidden>{ICON[r.verdict]}</span> {LABEL[r.verdict]}</span>
+            {co && <span className={styles.ticker}>{co.ticker}</span>}
             <q className={styles.quote}>{r.claim.raw_text}</q>
           </div>
+          {r.trust && <p className={styles.trust}>{TRUST[r.trust]}</p>}
           <p className={styles.parsed}>Parsed as: {parsedAs(r.claim)}</p>
           {r.reason && <p className={styles.reason}>{r.reason}</p>}
           {r.arithmetic && <p className={styles.math}>{r.arithmetic}</p>}
+          {r.checks.length > 0 && (
+            <details className={styles.checks}>
+              <summary>Data checks ({r.checks.filter((k) => k.ok).length}/{r.checks.length} passed)</summary>
+              <ul>{r.checks.map((k, j) => <li key={j}>{k.ok ? "✓" : "✕"} {k.name}: {k.detail}</li>)}</ul>
+            </details>
+          )}
           {r.evidence.length > 0 && (
             <ul className={styles.evidence}>
               {r.evidence.map((e, j) => (
@@ -108,7 +128,7 @@ export default function Home() {
         </section>
       ))}
 
-      <p className={styles.foot}>Language model only parses sentences into structured claims. Every figure, calculation and verdict is computed in code from SEC XBRL data. Demo: one company, three fiscal years.{source && ` Data source: ${source === "live" ? "SEC EDGAR (live, cached 24h)" : "bundled SEC snapshot (SEC unreachable)"}.`}</p>
+      <p className={styles.foot}>Language model only parses sentences into structured claims. Every figure, calculation and verdict is computed in code from SEC XBRL data. Demo: annual figures, last three fiscal years.{sources.length > 0 && ` Data source: ${sources.map((x) => (x === "live" ? "SEC EDGAR (live, cached 24h)" : "bundled SEC snapshot (SEC unreachable)")).join(" and ")}.`}</p>
     </main>
   );
 }

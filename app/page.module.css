@@ -25,3 +25,9 @@
 .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--fg); animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+.company { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); }
+.company input { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--fg); }
+.ticker { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); color: var(--muted); }
+.trust { margin: 0; font-size: 0.8rem; font-weight: 600; }
+.checks { font-size: 0.8rem; color: var(--muted); }
+.checks ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; }

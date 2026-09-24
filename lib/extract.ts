@@ -9,7 +9,7 @@ const ExtractionSchema = z.object({ claims: z.array(ClaimSchema) });
 
 const SYSTEM = `You convert sentences from a draft earnings note into structured claims. You do NOT verify, compute, or look up any number; a separate program does that.
 
-Company under review: Apple Inc. (fiscal years end in late September; label them FY2023, FY2024, FY2025).
+Any US-listed company can be named.
 Supported metrics: revenue, operating_income, net_income, gross_profit, operating_margin, gross_margin.
 Supported kinds:
 - pct_change: a stated percentage change (value = the percent as a positive number, direction = "up" or "down").
@@ -18,8 +18,10 @@ Supported kinds:
 
 Rules:
 - Return one claim per checkable numerical/directional statement, at most ${MAX_CLAIMS}, in order. raw_text is the sentence or clause copied verbatim.
-- "period" / "compare_to": use FY labels only if the text names the years; otherwise null (the program treats null as latest year vs. the prior year).
-- If the statement is not a checkable claim about a supported metric (other metric such as EPS, another company, forecasts, opinions, vague language), set metric and kind to null and give a short unsupported_reason. Never guess.
+- company: the company the claim is about, copied as written in the note (a name or a ticker; do not translate or guess a ticker). If the sentence names no company, use the company named earlier in the note; if none is named anywhere, use null.
+- compares_companies: true if the sentence involves more than one company or compares against peers, the market or a benchmark ("faster than Y", "outpaced the market", "beat estimates"); otherwise false. When true, set metric and kind to null.
+- "period" / "compare_to": use labels like FY2025 only if the text names the year ("fiscal 2025", "FY25", "in 2025" all mean FY2025); otherwise null (the program treats null as the latest year vs. the prior year).
+- If the statement is not a checkable claim about a supported metric (other metric such as EPS, forecasts, opinions, vague language, or a comparison, see compares_companies), set metric and kind to null and give a short unsupported_reason. Never guess.
 - Copy numbers exactly as written (keep their stated precision, e.g. 18 vs 18.0). Do not convert, round, or infer figures that were not stated.
 - Set fields that do not apply to null.`;
 
