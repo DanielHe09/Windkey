@@ -1,8 +1,6 @@
 # Earnings claim checker
 
-<video src="public/Windkey.mp4" controls muted width="720"></video>
-
-[Watch the demo video](public/Windkey.mp4)
+**[▶ Watch the demo video](https://windkey.vercel.app/Windkey.mp4)** · **[Try the live app](https://windkey.vercel.app)**
 
 Paste 1–3 numerical claims from a draft earnings note about any US-listed company. Each claim is checked against SEC 10-K XBRL data and returns **Supported / Incorrect / Cannot verify**, with the arithmetic, both source figures, and a link to the filing.
 
